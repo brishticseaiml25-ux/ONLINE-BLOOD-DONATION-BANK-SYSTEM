@@ -1,0 +1,212 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ArrowLeft, Droplet, MapPin } from "lucide-react"
+
+interface PublicViewerProps {
+  onNavigate: (page: any) => void
+}
+
+interface Hospital {
+  id: string
+  hospitalName: string
+  address: string
+  phone: string
+  email: string
+  inventory: Record<string, number>
+}
+
+interface Camp {
+  id: string
+  hospitalName: string
+  date: string
+  location: string
+  participants: string[]
+}
+
+export default function PublicViewer({ onNavigate }: PublicViewerProps) {
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [camps, setCamps] = useState<Camp[]>([])
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null)
+
+  const bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+
+  useEffect(() => {
+    const hospitalList = JSON.parse(localStorage.getItem("hospitals") || "[]")
+    setHospitals(hospitalList)
+
+    const campList = JSON.parse(localStorage.getItem("camps") || "[]")
+    setCamps(campList)
+  }, [])
+
+  const getInventoryStatus = (units: number) => {
+    if (units === 0) return "text-destructive"
+    if (units < 5) return "text-orange-600"
+    return "text-green-600"
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" onClick={() => onNavigate("landing")} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Blood Bank Availability</h1>
+            <p className="text-muted-foreground">Check blood availability in all registered hospitals</p>
+          </div>
+        </div>
+
+        {selectedHospital ? (
+          <>
+            <Button variant="outline" onClick={() => setSelectedHospital(null)} className="mb-6 gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Hospitals
+            </Button>
+
+            <Card className="p-8 mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">{selectedHospital.hospitalName}</h2>
+              <p className="text-muted-foreground mb-6">{selectedHospital.address}</p>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Contact Info */}
+                <div>
+                  <h3 className="font-semibold text-foreground mb-3">Contact Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">Phone:</span> {selectedHospital.phone}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <span className="font-medium text-foreground">Email:</span> {selectedHospital.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Blood Inventory */}
+                <div>
+                  <h3 className="font-semibold text-foreground mb-3">Blood Groups Available</h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {bloodGroups.map((group) => (
+                      <div key={group} className="text-center p-3 bg-background/50 rounded-lg">
+                        <p className="text-sm font-medium text-foreground mb-1">{group}</p>
+                        <p className={`font-bold ${getInventoryStatus(selectedHospital.inventory[group] || 0)}`}>
+                          {selectedHospital.inventory[group] || 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Units</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Camps by this Hospital */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Upcoming Camps</h3>
+              {camps.filter((c) => c.hospitalName === selectedHospital.hospitalName).length === 0 ? (
+                <Card className="p-8 text-center text-muted-foreground">No upcoming camps</Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {camps
+                    .filter((c) => c.hospitalName === selectedHospital.hospitalName)
+                    .map((camp) => (
+                      <Card key={camp.id} className="p-6">
+                        <h4 className="font-semibold text-foreground mb-2">Donation Camp</h4>
+                        <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {camp.location}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Date: {new Date(camp.date).toLocaleDateString()} {new Date(camp.date).toLocaleTimeString()}
+                        </p>
+                        <div className="bg-background/50 p-3 rounded-lg">
+                          <p className="text-xs text-muted-foreground">Expected Participants</p>
+                          <p className="text-lg font-bold text-primary">{camp.participants.length}</p>
+                        </div>
+                      </Card>
+                    ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Hospitals List */}
+            <div className="mb-12">
+              <h2 className="text-xl font-bold text-foreground mb-4">Registered Hospitals & Blood Banks</h2>
+              {hospitals.length === 0 ? (
+                <Card className="p-8 text-center text-muted-foreground">No hospitals registered yet</Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {hospitals.map((hospital) => (
+                    <Card
+                      key={hospital.id}
+                      className="p-6 cursor-pointer hover:border-primary/50 hover:shadow-lg transition-all"
+                      onClick={() => setSelectedHospital(hospital)}
+                    >
+                      <h3 className="text-lg font-semibold text-foreground mb-2">{hospital.hospitalName}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{hospital.address}</p>
+
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-foreground mb-2 flex items-center gap-1">
+                          <Droplet className="w-3 h-3" />
+                          Blood Availability
+                        </p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {bloodGroups.map((group) => (
+                            <div key={group} className="text-center text-xs">
+                              <p className="font-medium text-foreground">{group}</p>
+                              <p className={`font-bold ${getInventoryStatus(hospital.inventory[group] || 0)}`}>
+                                {hospital.inventory[group] || 0}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Button variant="outline" className="w-full bg-transparent">
+                        View Details
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* All Camps */}
+            <div>
+              <h2 className="text-xl font-bold text-foreground mb-4">Upcoming Donation Camps</h2>
+              {camps.length === 0 ? (
+                <Card className="p-8 text-center text-muted-foreground">No camps scheduled yet</Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {camps.map((camp) => (
+                    <Card key={camp.id} className="p-6">
+                      <h4 className="font-semibold text-foreground mb-2">{camp.hospitalName}</h4>
+                      <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {camp.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Date: {new Date(camp.date).toLocaleDateString()} {new Date(camp.date).toLocaleTimeString()}
+                      </p>
+                      <div className="bg-background/50 p-3 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Registered Participants</p>
+                        <p className="text-lg font-bold text-primary">{camp.participants.length}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
