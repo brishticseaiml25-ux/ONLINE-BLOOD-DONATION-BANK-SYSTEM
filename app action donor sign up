@@ -1,0 +1,60 @@
+"use server"
+
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+
+function generateUniqueCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+  let code = ""
+  for (let i = 0; i < 7; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+export async function createDonorProfile(
+  userId: string,
+  donorData: {
+    name: string
+    email: string
+    phone: string
+    address: string
+    state: string
+    pin_code: string
+    blood_type: string
+  },
+) {
+  const cookieStore = await cookies()
+
+  // Use service role key to bypass RLS for inserts
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+      },
+    },
+  })
+
+  const uniqueCode = generateUniqueCode()
+
+  const { data, error } = await supabase.from("donors").insert({
+    id: userId,
+    name: donorData.name,
+    email: donorData.email,
+    phone: donorData.phone,
+    address: donorData.address,
+    state: donorData.state,
+    pin_code: donorData.pin_code,
+    blood_type: donorData.blood_type,
+    unique_code: uniqueCode,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return { success: true, unique_code: uniqueCode }
+}
