@@ -1,0 +1,57 @@
+"use server"
+
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+
+export async function createHospitalProfile(
+  userId: string,
+  hospitalData: {
+    name: string
+    email: string
+    address: string
+    contact_info: string
+  },
+) {
+  const cookieStore = await cookies()
+
+  // Use service role key to bypass RLS for inserts
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+      },
+    },
+  })
+
+  // Create hospital profile
+  const { error: hospitalError } = await supabase.from("hospitals").insert({
+    id: userId,
+    name: hospitalData.name,
+    email: hospitalData.email,
+    address: hospitalData.address,
+    contact_info: hospitalData.contact_info,
+  })
+
+  if (hospitalError) {
+    throw new Error(hospitalError.message)
+  }
+
+  // Create initial blood inventory for all blood types
+  const bloodTypes = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+  const inventoryData = bloodTypes.map((type) => ({
+    hospital_id: userId,
+    blood_type: type,
+    quantity: 0,
+  }))
+
+  const { error: invError } = await supabase.from("blood_inventory").insert(inventoryData)
+
+  if (invError) {
+    throw new Error(invError.message)
+  }
+
+  return { success: true }
+}
