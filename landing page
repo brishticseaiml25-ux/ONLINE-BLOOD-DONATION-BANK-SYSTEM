@@ -1,0 +1,108 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Droplet, Hospital, Eye, LogIn } from "lucide-react"
+
+interface LandingPageProps {
+  onNavigate: (page: any) => void
+}
+
+export default function LandingPage({ onNavigate }: LandingPageProps) {
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* Header */}
+      <header className="border-b border-border/40 bg-background/95 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Droplet className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-foreground">BloodBank Connect</h1>
+          </div>
+          <Button variant="outline" onClick={() => onNavigate("donor-login")} className="gap-2">
+            <LogIn className="w-4 h-4" />
+            Login
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="flex-1 flex items-center justify-center px-4 py-12 sm:py-20">
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4 text-balance">
+              Save Lives Through Blood Donation
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 text-balance">
+              Connect donors with hospitals and blood banks. Find blood availability in real-time.
+            </p>
+          </div>
+
+          {/* Role Selection Cards */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Donor Card */}
+            <Card
+              className="p-8 border-2 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer"
+              onClick={() => onNavigate("donor-signup")}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Droplet className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">Become a Donor</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Register as a blood donor and help save lives. Get notifications about donation camps in your area.
+                </p>
+                <Button className="w-full bg-primary hover:bg-primary/90 text-white">Sign Up</Button>
+              </div>
+            </Card>
+
+            {/* Hospital Card */}
+            <Card
+              className="p-8 border-2 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer"
+              onClick={() => onNavigate("hospital-signup")}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Hospital className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">Hospital / Organization</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Register your hospital or blood bank. Manage inventory and organize donation camps.
+                </p>
+                <Button className="w-full bg-primary hover:bg-primary/90 text-white">Register</Button>
+              </div>
+            </Card>
+
+            {/* Public Viewer Card */}
+            <Card
+              className="p-8 border-2 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer"
+              onClick={() => onNavigate("public-viewer")}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Eye className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">Check Blood Availability</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  View real-time blood availability in all registered hospitals and blood banks near you.
+                </p>
+                <Button variant="outline" className="w-full bg-transparent">
+                  View Now
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border/40 bg-background/50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
+          <p>BloodBank Connect © 2025. Saving lives, one donation at a time.</p>
+        </div>
+      </footer>
+    </div>
+  )
+}
