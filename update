@@ -1,0 +1,17 @@
+-- Remove Supabase Auth dependency, add simple password-based authentication to donors and hospitals tables
+ALTER TABLE donors ADD COLUMN IF NOT EXISTS username VARCHAR(255) UNIQUE NOT NULL;
+ALTER TABLE donors ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) NOT NULL;
+
+ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS username VARCHAR(255) UNIQUE NOT NULL;
+ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) NOT NULL;
+
+-- Drop the foreign key constraint to auth.users if it exists
+ALTER TABLE donors DROP CONSTRAINT IF EXISTS donors_id_fkey;
+ALTER TABLE hospitals DROP CONSTRAINT IF EXISTS hospitals_id_fkey;
+
+-- Update id column to be a regular UUID primary key instead of foreign key
+ALTER TABLE donors ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE hospitals ALTER COLUMN id DROP DEFAULT;
+
+ALTER TABLE donors ADD DEFAULT gen_random_uuid();
+ALTER TABLE hospitals ADD DEFAULT gen_random_uuid();
