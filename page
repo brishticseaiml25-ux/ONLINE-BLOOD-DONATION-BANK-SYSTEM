@@ -1,0 +1,49 @@
+"use client"
+
+import { useState } from "react"
+import LandingPage from "@/components/landing-page"
+import DonorSignup from "@/components/donor-signup"
+import HospitalSignup from "@/components/hospital-signup"
+import DonorDashboard from "@/components/donor-dashboard"
+import HospitalDashboard from "@/components/hospital-dashboard"
+import PublicViewer from "@/components/public-viewer"
+import DonorLogin from "@/components/donor-login"
+import HospitalLogin from "@/components/hospital-login"
+
+type Page =
+  | "landing"
+  | "donor-signup"
+  | "donor-login"
+  | "donor-dashboard"
+  | "hospital-signup"
+  | "hospital-login"
+  | "hospital-dashboard"
+  | "public-viewer"
+type UserRole = "donor" | "hospital" | null
+
+export default function Home() {
+  const [currentPage, setCurrentPage] = useState<Page>("landing")
+  const [userRole, setUserRole] = useState<UserRole>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const handleNavigation = (page: Page, role?: UserRole, id?: string) => {
+    setCurrentPage(page)
+    if (role) setUserRole(role)
+    if (id) setUserId(id)
+  }
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-background to-background/95">
+      {currentPage === "landing" && <LandingPage onNavigate={handleNavigation} />}
+      {currentPage === "donor-signup" && <DonorSignup onNavigate={handleNavigation} />}
+      {currentPage === "donor-login" && <DonorLogin onNavigate={handleNavigation} />}
+      {currentPage === "donor-dashboard" && userId && <DonorDashboard userId={userId} onNavigate={handleNavigation} />}
+      {currentPage === "hospital-signup" && <HospitalSignup onNavigate={handleNavigation} />}
+      {currentPage === "hospital-login" && <HospitalLogin onNavigate={handleNavigation} />}
+      {currentPage === "hospital-dashboard" && userId && (
+        <HospitalDashboard userId={userId} onNavigate={handleNavigation} />
+      )}
+      {currentPage === "public-viewer" && <PublicViewer onNavigate={handleNavigation} />}
+    </main>
+  )
+}
