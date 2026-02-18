@@ -1,0 +1,206 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { LogOut, Droplet, MapPin } from "lucide-react"
+
+interface DonorDashboardProps {
+  userId: string
+  onNavigate: (page: any) => void
+}
+
+interface Camp {
+  id: string
+  hospitalName: string
+  date: string
+  location: string
+  participants: string[]
+}
+
+interface Donor {
+  id: string
+  name: string
+  email: string
+  phone: string
+  address: string
+  state: string
+  bloodType: string
+  uniqueCode: string
+  camps: string[]
+  donationHistory: Array<{
+    hospitalName: string
+    date: string
+    location: string
+  }>
+}
+
+export default function DonorDashboard({ userId, onNavigate }: DonorDashboardProps) {
+  const [donor, setDonor] = useState<Donor | null>(null)
+  const [camps, setCamps] = useState<Camp[]>([])
+  const [donatedCamps, setDonatedCamps] = useState<Camp[]>([])
+
+  useEffect(() => {
+    const donors = JSON.parse(localStorage.getItem("donors") || "[]")
+    const currentDonor = donors.find((d: any) => d.id === userId)
+    setDonor(currentDonor)
+
+    const allCamps = JSON.parse(localStorage.getItem("camps") || "[]")
+    setCamps(allCamps.filter((c: any) => !currentDonor?.camps.includes(c.id)))
+    setDonatedCamps(allCamps.filter((c: any) => currentDonor?.camps.includes(c.id)))
+  }, [userId])
+
+  const handleJoinCamp = (campId: string) => {
+    const donors = JSON.parse(localStorage.getItem("donors") || "[]")
+    const updatedDonors = donors.map((d: any) => (d.id === userId ? { ...d, camps: [...(d.camps || []), campId] } : d))
+    localStorage.setItem("donors", JSON.stringify(updatedDonors))
+
+    const camps = JSON.parse(localStorage.getItem("camps") || "[]")
+    const updatedCamps = camps.map((c: any) =>
+      c.id === campId ? { ...c, participants: [...c.participants, userId] } : c,
+    )
+    localStorage.setItem("camps", JSON.stringify(updatedCamps))
+
+    setDonor((prev) => (prev ? { ...prev, camps: [...prev.camps, campId] } : null))
+    setCamps((prevCamps) => prevCamps.filter((c: any) => !donor?.camps.includes(c.id) && c.id !== campId))
+    setDonatedCamps([...donatedCamps, camps.find((c: any) => c.id === campId)])
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("currentDonorId")
+    onNavigate("landing")
+  }
+
+  if (!donor) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Welcome, {donor.name}</h1>
+            <p className="text-muted-foreground">
+              Your unique code: <span className="font-mono font-bold text-primary">{donor.uniqueCode}</span>
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
+
+        {/* Profile Info */}
+        <Card className="p-6 mb-8">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Your Information</h2>
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Email</p>
+              <p className="text-foreground font-medium">{donor.email}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Phone</p>
+              <p className="text-foreground font-medium">{donor.phone}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Address</p>
+              <p className="text-foreground font-medium">
+                {donor.address}, {donor.state}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Blood Type</p>
+              <p className="text-foreground font-medium text-lg">{donor.bloodType}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Total Donations</p>
+              <p className="text-foreground font-medium">{donor.camps.length}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Verified Donations</p>
+              <p className="text-foreground font-medium">{donor.donationHistory.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Available Camps */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-foreground mb-4">Available Blood Donation Camps</h2>
+          {camps.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">No camps available at the moment</Card>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {camps.map((camp) => (
+                <Card key={camp.id} className="p-6">
+                  <h3 className="font-semibold text-foreground mb-2">{camp.hospitalName}</h3>
+                  <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {camp.location}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">Date: {new Date(camp.date).toLocaleDateString()}</p>
+                  <Button
+                    onClick={() => handleJoinCamp(camp.id)}
+                    className="w-full bg-primary hover:bg-primary/90 text-white"
+                  >
+                    Join Camp
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Donated Camps */}
+        <div>
+          <h2 className="text-xl font-bold text-foreground mb-4">Your Donations</h2>
+          {donatedCamps.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">You haven't joined any camps yet</Card>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {donatedCamps.map((camp) => (
+                <Card key={camp.id} className="p-6 border-green-500/50 bg-green-500/5">
+                  <div className="flex items-start gap-3">
+                    <Droplet className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground mb-2">{camp.hospitalName}</h3>
+                      <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {camp.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Date: {new Date(camp.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-green-600 font-medium mt-3">Donation Completed</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Verified Donation History */}
+        {donor.donationHistory.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-foreground mb-4">Verified Donation History</h2>
+            <div className="space-y-3">
+              {donor.donationHistory.map((history, idx) => (
+                <Card key={idx} className="p-4 border-blue-500/50 bg-blue-500/5">
+                  <div className="flex items-start gap-3">
+                    <Droplet className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">{history.hospitalName}</p>
+                      <p className="text-sm text-muted-foreground">{history.location}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{history.date}</p>
+                      <p className="text-xs text-blue-600 font-medium mt-2">✓ Verified by Hospital</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
