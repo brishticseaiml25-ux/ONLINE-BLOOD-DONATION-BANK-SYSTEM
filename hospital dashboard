@@ -1,0 +1,334 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { LogOut, Droplet, Calendar, Check } from "lucide-react"
+
+interface HospitalDashboardProps {
+  userId: string
+  onNavigate: (page: any) => void
+}
+
+interface Hospital {
+  id: string
+  hospitalName: string
+  email: string
+  phone: string
+  address: string
+  inventory: Record<string, number>
+  camps: string[]
+}
+
+interface Camp {
+  id: string
+  hospitalId: string
+  hospitalName: string
+  date: string
+  location: string
+  participants: string[]
+}
+
+export default function HospitalDashboard({ userId, onNavigate }: HospitalDashboardProps) {
+  const [hospital, setHospital] = useState<Hospital | null>(null)
+  const [camps, setCamps] = useState<Camp[]>([])
+  const [showInventoryForm, setShowInventoryForm] = useState(false)
+  const [showCampForm, setShowCampForm] = useState(false)
+  const [showDonorCodeForm, setShowDonorCodeForm] = useState(false)
+  const [selectedCampId, setSelectedCampId] = useState<string | null>(null)
+  const [inventoryForm, setInventoryForm] = useState<Record<string, number>>({})
+  const [campForm, setCampForm] = useState({
+    date: "",
+    location: "",
+  })
+  const [donorCodeForm, setDonorCodeForm] = useState({
+    code: "",
+    error: "",
+  })
+
+  const bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+
+  useEffect(() => {
+    const hospitals = JSON.parse(localStorage.getItem("hospitals") || "[]")
+    const currentHospital = hospitals.find((h: any) => h.id === userId)
+    setHospital(currentHospital)
+    setInventoryForm(currentHospital?.inventory || {})
+
+    const allCamps = JSON.parse(localStorage.getItem("camps") || "[]")
+    setCamps(allCamps.filter((c: any) => c.hospitalId === userId))
+  }, [userId])
+
+  const handleInventoryChange = (group: string, value: string) => {
+    setInventoryForm({
+      ...inventoryForm,
+      [group]: Number.parseInt(value) || 0,
+    })
+  }
+
+  const handleSaveInventory = () => {
+    const hospitals = JSON.parse(localStorage.getItem("hospitals") || "[]")
+    const updatedHospitals = hospitals.map((h: any) => (h.id === userId ? { ...h, inventory: inventoryForm } : h))
+    localStorage.setItem("hospitals", JSON.stringify(updatedHospitals))
+    setHospital((prev) => (prev ? { ...prev, inventory: inventoryForm } : null))
+    setShowInventoryForm(false)
+  }
+
+  const handleCreateCamp = () => {
+    if (!campForm.date || !campForm.location) {
+      alert("Please fill all fields")
+      return
+    }
+
+    const newCamp: Camp = {
+      id: Date.now().toString(),
+      hospitalId: userId,
+      hospitalName: hospital?.hospitalName || "",
+      date: campForm.date,
+      location: campForm.location,
+      participants: [],
+    }
+
+    const allCamps = JSON.parse(localStorage.getItem("camps") || "[]")
+    allCamps.push(newCamp)
+    localStorage.setItem("camps", JSON.stringify(allCamps))
+
+    const hospitals = JSON.parse(localStorage.getItem("hospitals") || "[]")
+    const updatedHospitals = hospitals.map((h: any) =>
+      h.id === userId ? { ...h, camps: [...h.camps, newCamp.id] } : h,
+    )
+    localStorage.setItem("hospitals", JSON.stringify(updatedHospitals))
+
+    setCamps([...camps, newCamp])
+    setCampForm({ date: "", location: "" })
+    setShowCampForm(false)
+  }
+
+  const handleVerifyDonor = () => {
+    if (!donorCodeForm.code) {
+      setDonorCodeForm({ ...donorCodeForm, error: "Please enter donor code" })
+      return
+    }
+
+    if (!selectedCampId) {
+      setDonorCodeForm({ ...donorCodeForm, error: "Please select a camp" })
+      return
+    }
+
+    const donors = JSON.parse(localStorage.getItem("donors") || "[]")
+    const donor = donors.find((d: any) => d.uniqueCode === donorCodeForm.code)
+
+    if (!donor) {
+      setDonorCodeForm({ ...donorCodeForm, error: "Invalid donor code" })
+      return
+    }
+
+    const camp = camps.find((c) => c.id === selectedCampId)
+    if (!camp) {
+      setDonorCodeForm({ ...donorCodeForm, error: "Camp not found" })
+      return
+    }
+
+    // Add donation to donor's history
+    const donationEntry = {
+      hospitalName: hospital?.hospitalName || "",
+      date: new Date(camp.date).toLocaleDateString(),
+      location: camp.location,
+    }
+
+    const updatedDonors = donors.map((d: any) =>
+      d.id === donor.id
+        ? {
+            ...d,
+            donationHistory: [...(d.donationHistory || []), donationEntry],
+          }
+        : d,
+    )
+    localStorage.setItem("donors", JSON.stringify(updatedDonors))
+
+    setDonorCodeForm({ code: "", error: "" })
+    alert(`✓ Donation verified for ${donor.name}!`)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("currentHospitalId")
+    onNavigate("landing")
+  }
+
+  if (!hospital) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{hospital.hospitalName}</h1>
+            <p className="text-muted-foreground">{hospital.address}</p>
+          </div>
+          <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
+
+        {/* Blood Inventory */}
+        <Card className="p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Droplet className="w-5 h-5 text-primary" />
+              Blood Inventory
+            </h2>
+            <Button
+              onClick={() => setShowInventoryForm(!showInventoryForm)}
+              variant={showInventoryForm ? "default" : "outline"}
+            >
+              {showInventoryForm ? "Cancel" : "Update Inventory"}
+            </Button>
+          </div>
+
+          {showInventoryForm ? (
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-4 gap-3">
+                {bloodGroups.map((group) => (
+                  <div key={group}>
+                    <label className="block text-sm font-medium text-foreground mb-1">{group}</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={inventoryForm[group] || 0}
+                      onChange={(e) => handleInventoryChange(group, e.target.value)}
+                      placeholder="Units"
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleSaveInventory} className="w-full bg-primary hover:bg-primary/90 text-white">
+                Save Inventory
+              </Button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-4 gap-3">
+              {bloodGroups.map((group) => (
+                <div key={group} className="bg-background/50 p-4 rounded-lg text-center">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">{group}</p>
+                  <p className="text-2xl font-bold text-primary">{hospital.inventory[group] || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Units</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Blood Donation Camps */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              Blood Donation Camps
+            </h2>
+            <Button onClick={() => setShowCampForm(!showCampForm)} variant={showCampForm ? "default" : "outline"}>
+              {showCampForm ? "Cancel" : "Schedule Camp"}
+            </Button>
+          </div>
+
+          {showCampForm && (
+            <Card className="p-6 mb-8">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Camp Date</label>
+                  <Input
+                    type="datetime-local"
+                    value={campForm.date}
+                    onChange={(e) => setCampForm({ ...campForm, date: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Location</label>
+                  <Input
+                    type="text"
+                    value={campForm.location}
+                    onChange={(e) => setCampForm({ ...campForm, location: e.target.value })}
+                    placeholder="Camp location"
+                    className="w-full"
+                  />
+                </div>
+                <Button onClick={handleCreateCamp} className="w-full bg-primary hover:bg-primary/90 text-white">
+                  Create Camp
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {camps.length === 0 ? (
+            <Card className="p-8 text-center text-muted-foreground">No camps scheduled yet</Card>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              {camps.map((camp) => (
+                <Card key={camp.id} className="p-6">
+                  <h3 className="font-semibold text-foreground mb-3">{hospital.hospitalName}</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Date: {new Date(camp.date).toLocaleDateString()} {new Date(camp.date).toLocaleTimeString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">Location: {camp.location}</p>
+                  <div className="bg-background/50 p-3 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Registered Donors</p>
+                    <p className="text-lg font-bold text-primary">{camp.participants.length}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {camps.length > 0 && (
+          <Card className="p-6 border-blue-500/50 bg-blue-500/5">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Check className="w-5 h-5 text-blue-600" />
+              Verify Donor Donations
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Select Camp</label>
+                <select
+                  value={selectedCampId || ""}
+                  onChange={(e) => setSelectedCampId(e.target.value)}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm"
+                >
+                  <option value="">Choose a camp...</option>
+                  {camps.map((camp) => (
+                    <option key={camp.id} value={camp.id}>
+                      {camp.location} - {new Date(camp.date).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Enter 7-Digit Donor Code</label>
+                <Input
+                  type="text"
+                  value={donorCodeForm.code}
+                  onChange={(e) => setDonorCodeForm({ ...donorCodeForm, code: e.target.value, error: "" })}
+                  placeholder="e.g., aB3#$xY"
+                  className="w-full"
+                />
+                {donorCodeForm.error && <p className="text-sm text-destructive mt-1">{donorCodeForm.error}</p>}
+              </div>
+              <Button
+                onClick={handleVerifyDonor}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Verify Donation
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
