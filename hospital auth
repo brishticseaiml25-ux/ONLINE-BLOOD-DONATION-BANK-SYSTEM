@@ -1,0 +1,93 @@
+"use server"
+
+import { createServerClient } from "@supabase/ssr"
+import { hashPassword } from "@/lib/auth-utils"
+
+export async function hospitalSignUp(formData: {
+  name: string
+  email: string
+  address: string
+  contact_info: string
+  username: string
+  password: string
+}) {
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+
+  try {
+    // Check if username already exists
+    const { data: existing } = await supabase.from("hospitals").select("id").eq("username", formData.username).single()
+
+    if (existing) {
+      throw new Error("Username already taken")
+    }
+
+    const passwordHash = hashPassword(formData.password)
+
+    const { data: hospital, error: hospitalError } = await supabase
+      .from("hospitals")
+      .insert({
+        name: formData.name,
+        email: formData.email,
+        address: formData.address,
+        contact_info: formData.contact_info,
+        username: formData.username,
+        password_hash: passwordHash,
+      })
+      .select()
+      .single()
+
+    if (hospitalError) throw hospitalError
+
+    // Create initial blood inventory for all blood types
+    const bloodTypes = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+    const inventoryData = bloodTypes.map((type) => ({
+      hospital_id: hospital.id,
+      blood_type: type,
+      quantity: 0,
+    }))
+
+    const { error: invError } = await supabase.from("blood_inventory").insert(inventoryData)
+
+    if (invError) throw invError
+
+    return { success: true }
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to create hospital account")
+  }
+}
+
+export async function hospitalLogin(username: string, password: string) {
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+
+  try {
+    const { data: hospital, error } = await supabase.from("hospitals").select("*").eq("username", username).single()
+
+    if (error || !hospital) {
+      throw new Error("Username not found")
+    }
+
+    const passwordHash = hashPassword(password)
+
+    if (passwordHash !== hospital.password_hash) {
+      throw new Error("Invalid password")
+    }
+
+    return { success: true, hospital }
+  } catch (err: any) {
+    throw new Error(err.message || "Login failed")
+  }
+}
