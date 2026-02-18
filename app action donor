@@ -1,0 +1,99 @@
+"use server"
+
+import { createServerClient } from "@supabase/ssr"
+import { hashPassword } from "@/lib/auth-utils"
+
+function generateUniqueCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+  let code = ""
+  for (let i = 0; i < 7; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+export async function donorSignUp(formData: {
+  name: string
+  email: string
+  phone: string
+  address: string
+  state: string
+  pin_code: string
+  blood_type: string
+  username: string
+  password: string
+}) {
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+
+  try {
+    // Check if username already exists
+    const { data: existing } = await supabase.from("donors").select("id").eq("username", formData.username).single()
+
+    if (existing) {
+      throw new Error("Username already taken")
+    }
+
+    const uniqueCode = generateUniqueCode()
+    const passwordHash = hashPassword(formData.password)
+
+    const { data, error } = await supabase
+      .from("donors")
+      .insert({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        state: formData.state,
+        pin_code: formData.pin_code,
+        blood_type: formData.blood_type,
+        username: formData.username,
+        password_hash: passwordHash,
+        unique_code: uniqueCode,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { success: true, unique_code: uniqueCode }
+  } catch (err: any) {
+    throw new Error(err.message || "Failed to create donor account")
+  }
+}
+
+export async function donorLogin(username: string, password: string) {
+  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    cookies: {
+      getAll() {
+        return []
+      },
+      setAll() {},
+    },
+  })
+
+  try {
+    const { data: donor, error } = await supabase.from("donors").select("*").eq("username", username).single()
+
+    if (error || !donor) {
+      throw new Error("Username not found")
+    }
+
+    const { hashPassword: hash } = await import("@/lib/auth-utils")
+    const passwordHash = hashPassword(password)
+
+    if (passwordHash !== donor.password_hash) {
+      throw new Error("Invalid password")
+    }
+
+    return { success: true, donor }
+  } catch (err: any) {
+    throw new Error(err.message || "Login failed")
+  }
+}
