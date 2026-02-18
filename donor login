@@ -1,0 +1,97 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft } from "lucide-react"
+
+interface DonorLoginProps {
+  onNavigate: (page: any, role?: any, id?: string) => void
+}
+
+export default function DonorLogin({ onNavigate }: DonorLoginProps) {
+  const [formData, setFormData] = useState({ username: "", password: "" })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+
+    if (!formData.username || !formData.password) {
+      setError("Username and password are required")
+      return
+    }
+
+    const donors = JSON.parse(localStorage.getItem("donors") || "[]")
+    const donor = donors.find((d: any) => d.username === formData.username && d.password === formData.password)
+
+    if (!donor) {
+      setError("Invalid username or password")
+      return
+    }
+
+    localStorage.setItem("currentDonorId", donor.id)
+    onNavigate("donor-dashboard", "donor", donor.id)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 py-12 px-4">
+      <div className="max-w-md mx-auto">
+        <Button variant="ghost" onClick={() => onNavigate("landing")} className="mb-8 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+
+        <Card className="p-8">
+          <h1 className="text-2xl font-bold text-foreground mb-6 text-center">Donor Login</h1>
+
+          {error && <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Username</label>
+              <Input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Your username"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Password</label>
+              <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Your password"
+                className="w-full"
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90 text-white">
+              {loading ? "Logging in..." : "Login"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account?{" "}
+            <button onClick={() => onNavigate("donor-signup")} className="text-primary hover:underline font-medium">
+              Sign up
+            </button>
+          </p>
+        </Card>
+      </div>
+    </div>
+  )
+}
