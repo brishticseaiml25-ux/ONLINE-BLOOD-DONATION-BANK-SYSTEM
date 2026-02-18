@@ -1,0 +1,253 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { ArrowLeft } from "lucide-react"
+
+interface DonorSignupProps {
+  onNavigate: (page: any, role?: any, id?: string) => void
+}
+
+function generateUniqueCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+  let code = ""
+  for (let i = 0; i < 7; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+export default function DonorSignup({ onNavigate }: DonorSignupProps) {
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    state: "",
+    pinCode: "",
+    bloodType: "O+",
+    username: "",
+    password: "",
+    confirmPassword: "",
+  })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  const bloodTypes = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"]
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess(false)
+
+    if (
+      !formData.name ||
+      !formData.phone ||
+      !formData.address ||
+      !formData.state ||
+      !formData.pinCode ||
+      !formData.username ||
+      !formData.password
+    ) {
+      setError("All fields are required")
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return
+    }
+
+    const donors = JSON.parse(localStorage.getItem("donors") || "[]")
+    if (donors.some((d: any) => d.username === formData.username)) {
+      setError("Username already exists")
+      return
+    }
+
+    const newDonor = {
+      id: Date.now().toString(),
+      name: formData.name,
+      phone: formData.phone,
+      address: formData.address,
+      state: formData.state,
+      pinCode: formData.pinCode,
+      bloodType: formData.bloodType,
+      username: formData.username,
+      password: formData.password,
+      uniqueCode: generateUniqueCode(),
+      camps: [],
+      donationHistory: [],
+    }
+
+    donors.push(newDonor)
+    localStorage.setItem("donors", JSON.stringify(donors))
+
+    setSuccess(true)
+    setTimeout(() => {
+      onNavigate("donor-login")
+    }, 2000)
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 py-12 px-4">
+      <div className="max-w-md mx-auto">
+        <Button variant="ghost" onClick={() => onNavigate("landing")} className="mb-8 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+
+        <Card className="p-8">
+          <h1 className="text-2xl font-bold text-foreground mb-6 text-center">Donor Registration</h1>
+
+          {error && <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg">{error}</div>}
+          {success && (
+            <div className="mb-4 p-3 bg-green-500/10 text-green-700 text-sm rounded-lg">
+              Account created successfully! Redirecting to login...
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Name</label>
+              <Input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Full name"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Username</label>
+              <Input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                placeholder="Choose a username"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+              <Input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="+91 XXXXX XXXXX"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+              <Input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Street address"
+                className="w-full"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">State</label>
+                <Input
+                  type="text"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="State"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Pin Code</label>
+                <Input
+                  type="text"
+                  name="pinCode"
+                  value={formData.pinCode}
+                  onChange={handleChange}
+                  placeholder="000000"
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Blood Type</label>
+              <select
+                name="bloodType"
+                value={formData.bloodType}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm"
+              >
+                {bloodTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Password</label>
+              <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="At least 6 characters"
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Confirm Password</label>
+              <Input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm password"
+                className="w-full"
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full bg-primary hover:bg-primary/90 text-white">
+              {loading ? "Creating Account..." : "Create Account"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Already have an account?{" "}
+            <button onClick={() => onNavigate("donor-login")} className="text-primary hover:underline font-medium">
+              Login
+            </button>
+          </p>
+        </Card>
+      </div>
+    </div>
+  )
+}
